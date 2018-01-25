@@ -9,6 +9,13 @@ For comments, questions, bug reports: enrico.maiorino@gmail.com
 
 See the tutorial in Jupiter notebook GraphKernel_tutorial.ipynb to see more features and understand the basic GraphKernel workflow.
 
+## Requirements
+
+- numpy
+- scipy
+- networkx
+- h5py (optional, for saving and loading kernels)
+
 ## Example of basic usage
 
 Initialization of Graph Kernel class:
