@@ -3,6 +3,8 @@ Python package to evaluate several similarity measures between nodes in a networ
 
 The methods in this package have been inspired by the network propagation framework explained in the wonderful paper 'Network propagation: a universal amplifier of genetic associations', Cowen et al. (2017), Nat Rev Genetics.
 
+**Notice: the term kernel is used very loosely here to indicate a similarity/projection matrix between nodes, even when it doesn't respect the basic kernel properties (symmetry/positive definiteness).**
+
 ## Example of basic usage
 
 ```
