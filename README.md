@@ -9,6 +9,8 @@ For comments, questions, bug reports: enrico.maiorino@gmail.com
 
 ## Example of basic usage
 
+Initialization of Graph Kernel class:
+
 ```
 from __future__ import division
 import networkx as nx
@@ -22,7 +24,7 @@ gk = GraphKernel.GraphKernel(g, verbose_level=1)
 source_nodes = [23, 45, 11, 98] # node ids chosen at random
 ```
 
-### Heat kernel
+### Evaluation of Heat kernel
 
 ```
 hk4 = gk.eval_heat_kernel(4) # Heat Kernel at time instant t=4
@@ -33,7 +35,7 @@ print proj_hk
 print ranking_hk
 ```
 
-### Random Walk with Restart kernel
+### Evaluation of Random Walk with Restart kernel
 
 ```
 rwr06 = gk.eval_rwr_kernel(0.6) # Random Walk with Restart kernel with restart probability alpha=0.6
@@ -44,7 +46,7 @@ print proj_rwr
 print ranking_rwr
 ```
 
-### Random Walk kernel
+### Evaluation of Random Walk kernel
 
 ```
 rw3 = gk.eval_rw_kernel(3) # Simple Random Walk with 3 steps
@@ -55,7 +57,7 @@ print proj_rw
 print ranking_rw
 ```
 
-### Diffusion State Distance kernel
+### Evaluation of Diffusion State Distance kernel
 
 ```
 dsd2 = gk.eval_dsd_kernel(2) # Diffusion State Distance with 2 time steps
