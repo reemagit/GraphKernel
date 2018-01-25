@@ -15,18 +15,37 @@ g = nx.barabasi_albert_graph(100,1)
 
 gk = GraphKernel.GraphKernel(g, verbose_level=1)
 
-hk4 = gk.eval_heat_kernel(4) # Heat Kernel at time instant t=4
-rwr06 = gk.eval_rwr_kernel(0.6) # Random Walk with Restart kernel with restart probability alpha=0.6
-rw3 = gk.eval_rw_kernel(3) # Simple Random Walk with 3 steps
-dsd2 = gk.eval_dsd_kernel(2) # Diffusion State Distance with 2 time steps
-
 source_nodes = [23, 45, 11, 98] # node ids chosen at random
 
-proj = gk.get_projection(source_nodes, rwr06) # Projection of source nodes on whole network with RWR kernel (alpha=0.6)
+# Heat kernel similarity
+hk4 = gk.eval_heat_kernel(4) # Heat Kernel at time instant t=4
+proj_hk = gk.get_projection(source_nodes, hk4) # Projection of source nodes on whole network
+ranking_hk = gk.get_ranking(proj_hk)
 
-print proj
+print proj_hk
+print ranking_hk
 
-ranking = gk.get_ranking(proj)
+# Random Walk with Restart similarity
+rwr06 = gk.eval_rwr_kernel(0.6) # Random Walk with Restart kernel with restart probability alpha=0.6
+proj_rwr = gk.get_projection(source_nodes, rwr06) # Projection of source nodes on whole network
+ranking_rwr = gk.get_ranking(proj_rwr)
 
-print ranking
+print proj_rwr
+print ranking_rwr
+
+# Heat kernel similarity
+rw3 = gk.eval_rw_kernel(3) # Simple Random Walk with 3 steps
+proj_rw = gk.get_projection(source_nodes, rw3) # Projection of source nodes on whole network
+ranking_rw = gk.get_ranking(proj_rw)
+
+print proj_rw
+print ranking_rw
+
+# Diffusion State Distance similarity
+dsd2 = gk.eval_dsd_kernel(2) # Diffusion State Distance with 2 time steps
+proj_dsd = gk.get_projection(source_nodes, dsd2) # Projection of source nodes on whole network
+ranking_dsd = gk.get_ranking(proj_dsd)
+
+print proj_dsd
+print ranking_dsd
 ```
