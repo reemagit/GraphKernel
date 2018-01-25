@@ -13,7 +13,7 @@ See the tutorial in Jupiter notebook GraphKernel_tutorial.ipynb to see more feat
 
 - numpy
 - scipy
-- networkx
+- networkx (optional but recommended, otherwise graphs can be passed as numpy adjacency matrices)
 - h5py (optional, for saving and loading kernels)
 
 ## Example of basic usage
