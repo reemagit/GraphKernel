@@ -5,6 +5,8 @@ The methods in this package have been inspired by the network propagation framew
 
 **Notice: the term kernel is used very loosely here to indicate a similarity/projection matrix between nodes, even when it doesn't respect the basic kernel properties (symmetry/positive definiteness).**
 
+For comments, questions, bug reports: enrico.maiorino@gmail.com
+
 ## Example of basic usage
 
 ```
