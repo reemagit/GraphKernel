@@ -1,1 +1,1 @@
-import GraphKernel
+from GraphKernel import GraphKernel
