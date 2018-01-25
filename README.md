@@ -7,6 +7,8 @@ The methods in this package have been inspired by the network propagation framew
 
 For comments, questions, bug reports: enrico.maiorino@gmail.com
 
+See the tutorial in Jupiter notebook GraphKernel_tutorial.ipynb to see more features and understand the basic GraphKernel workflow.
+
 ## Example of basic usage
 
 Initialization of Graph Kernel class:
