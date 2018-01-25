@@ -24,21 +24,25 @@ class GIDMapper:
             return [self._gid2id_dict[gid] for gid in gids]
 
 class GraphKernel:
-    def __init__(self, graph=None, savefile=None, nodelist=None, verbose_level=1):
+    def __init__(self, graph=None, savefile=None, nodelist=None, weight='weight', verbose_level=1):
         """
             Instantiates a GraphKernel object. Can be initialized by passing a networkx graph or from a savefile
 
             Parameters
             ----------
-            graph : NetworkX graph
-                Input graph
+            graph : NetworkX graph or numpy ndarray
+                Input graph as NetworkX graph or as numpy adjacency matrix (numpy array)
 
             savefile : str
                 Path of savefile
 
             nodelist : list
-                List of node IDs to be used for rows/columns ordering in the adjacency matrix. If None nodelist = graph.nodes()
+                List of node IDs to be used for rows/columns ordering in the adjacency matrix. If None nodelist = graph.nodes().
                 This parameter is best left as default
+
+            weight : str
+                Name of the NetworkX edge property to be considered as edge weight for weighted graphs
+                If graph is provided as numpy adjacency matrix this parameter is ignored
 
             verbose_level : int
                 Level of verbosity. Current implemented levels: 0 for no output, 1 for basic output
@@ -52,9 +56,14 @@ class GraphKernel:
         self.verbose_level = verbose_level
         if savefile is None:
             self.speak("Initializing GraphKernel...", newline=False, verbose_level=1)
-            if nodelist is None:
-                nodelist = graph.nodes()
-            self.adj = np.array(nx.adjacency_matrix(graph ,nodelist=nodelist).todense())
+            if isinstance(graph, np.ndarray) or isinstance(graph, np.matrixlib.defmatrix.matrix):
+                self.adj = np.asarray(graph)
+                if nodelist is None:
+                    nodelist = range(self.adj.shape[0])
+            else: # if NetworkX graph
+                self.adj = np.array(nx.adjacency_matrix(graph ,nodelist=nodelist, weight='weight').todense())
+                if nodelist is None:
+                    nodelist = graph.nodes()
             self.nodelist = nodelist
             self.gm = GIDMapper(nodelist=nodelist)
             self.kernels = {}
