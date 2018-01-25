@@ -3,11 +3,11 @@ Python package to evaluate several similarity measures between nodes in a networ
 
 The methods in this package have been inspired by the network propagation framework explained in the wonderful paper 'Network propagation: a universal amplifier of genetic associations', Cowen et al. (2017), Nat Rev Genetics.
 
-**Notice: the term kernel is used very loosely here to indicate a similarity/projection matrix between nodes, even when it doesn't respect the basic kernel properties (symmetry/positive definiteness). Also, the nomenclature graph kernel does not refer to a similarity kernel between graphs, but only between nodes.**
+**Notice**: the term kernel is used very loosely here to indicate a similarity/projection matrix between nodes, even when it doesn't respect the basic kernel properties (symmetry/positive definiteness). Also, the nomenclature graph kernel does not refer to a similarity kernel between graphs, but only between nodes.
 
 For comments, questions, bug reports: enrico.maiorino@gmail.com
 
-See the tutorial in Jupiter notebook GraphKernel_tutorial.ipynb to see more features and understand the basic GraphKernel workflow.
+See the tutorial in Jupiter notebook **GraphKernel_tutorial.ipynb** to see more features and understand the basic GraphKernel workflow.
 
 ## Requirements
 
