@@ -1,5 +1,5 @@
 # GraphKernel
-Python package to evaluate several similarity measures between nodes in a networkX graph and rank network nodes according to their similarity to a subset of source nodes. This package is optimized to make use of vectorized numpy and scipy expression in order to obtain near-native performances. It can be utilized for quickly comparing different network-propagation-based similarity measures in problems such as gene prioritization and disease module detection.
+Python package to evaluate several similarity measures between nodes in a networkX graph and rank network nodes according to their similarity to a subset of source nodes. This package is optimized to make use of vectorized numpy and scipy expression in order to obtain near-native performances. It can be utilized for quickly comparing different network-propagation-based similarity measures in network science problems such as **gene prioritization** and **disease module detection**.
 
 The methods in this package have been inspired by the network propagation framework explained in the wonderful paper 'Network propagation: a universal amplifier of genetic associations', Cowen et al. (2017), Nat Rev Genetics.
 
