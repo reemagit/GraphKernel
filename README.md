@@ -38,7 +38,7 @@ source_nodes = [23, 45, 11, 98] # node ids chosen at random
 ```
 hk4 = gk.eval_heat_kernel(4) # Heat Kernel at time instant t=4
 proj_hk = gk.get_projection(source_nodes, hk4) # Projection of source nodes on whole network
-ranking_hk = gk.get_ranking(proj_hk)
+ranking_hk = gk.get_ranking(proj_hk) # Target nodes IDs ordered by projection score
 
 print proj_hk
 print ranking_hk
@@ -49,7 +49,7 @@ print ranking_hk
 ```
 rwr06 = gk.eval_rwr_kernel(0.6) # Random Walk with Restart kernel with restart probability alpha=0.6
 proj_rwr = gk.get_projection(source_nodes, rwr06) # Projection of source nodes on whole network
-ranking_rwr = gk.get_ranking(proj_rwr)
+ranking_rwr = gk.get_ranking(proj_rwr) # Target nodes IDs ordered by projection score
 
 print proj_rwr
 print ranking_rwr
@@ -60,7 +60,7 @@ print ranking_rwr
 ```
 rw3 = gk.eval_rw_kernel(3) # Simple Random Walk with 3 steps
 proj_rw = gk.get_projection(source_nodes, rw3) # Projection of source nodes on whole network
-ranking_rw = gk.get_ranking(proj_rw)
+ranking_rw = gk.get_ranking(proj_rw) # Target nodes IDs ordered by projection score
 
 print proj_rw
 print ranking_rw
@@ -71,7 +71,7 @@ print ranking_rw
 ```
 dsd2 = gk.eval_dsd_kernel(2) # Diffusion State Distance with 2 time steps
 proj_dsd = gk.get_projection(source_nodes, dsd2) # Projection of source nodes on whole network
-ranking_dsd = gk.get_ranking(proj_dsd)
+ranking_dsd = gk.get_ranking(proj_dsd) # Target nodes IDs ordered by projection score
 
 print proj_dsd
 print ranking_dsd
