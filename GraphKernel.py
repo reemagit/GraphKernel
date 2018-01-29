@@ -4,6 +4,7 @@ import networkx as nx
 import warnings
 import kernels
 import statsig
+from functools import partial
 
 class GIDMapper:
     def __init__(self, nodelist):
@@ -167,6 +168,37 @@ class GraphKernel:
             self.speak('Complete.', newline=True)
         return kid
 
+    def eval_kernel_statistics(self, kernel, n_samples=None, rdmmode='CONFIGURATION_MODEL'):
+        if rdmmode == 'CONFIGURATION_MODEL':
+            if n_samples is None:
+                raise ValueError("n_samples argument must be provided if samples is set to 'CONFIGURATION_MODEL'.")
+            graph = self.rebuild_nx_graph()
+            degseq = [nx.degree(graph,node) for node in self.nodelist]
+
+            # Welford's method (ca. 1960) to calculate running variance
+            N = n_samples
+            M = 0
+            S = 0
+            try:
+                from tqdm import tnrange # if tqdm is present use tqdm progress bar
+                rangefunc = tnrange
+            except ImportError: # if tqdm is not present it will fallback on standard loop
+                rangefunc = range
+            self.speak('Calculating kernel statistics (this may take a long while)...', newline=False, verbose_level=1)
+            for k in rangefunc(N):
+                rdmgraph = nx.relabel_nodes(nx.configuration_model(degseq), mapping={i:self.nodelist[i] for i in range(len(self.nodelist))})
+                rdmadj = np.asarray(nx.adjacency_matrix(rdmgraph, nodelist=self.nodelist).todense())
+                kmatrix = self.kid2func(kernel)(A=rdmadj)
+                x = kmatrix
+                oldM = M
+                M = M + (x - M) / (k + 1)
+                S = S + (x - M) * (x - oldM)
+            self.kernels[kernel + '_cmmean'] = M
+            self.kernels[kernel + '_cmstd'] = np.sqrt(S / (N - 1))
+            self.speak('Complete', newline=True, verbose_level=1)
+        else:
+            raise ValueError('Incorrect rdmmode parameter selected ({}): possible modes are CONFIGURATION_MODEL.'.format(rdmmode))
+
     def onehot_encode(self, nodeset, norm=False):
         vec = np.zeros(self.adj.shape[0])
         vec[self.gm.gid2id(nodeset)] = 1
@@ -229,7 +261,10 @@ class GraphKernel:
 
         """
         if isinstance(kernel, basestring):
+            kid = kernel
             kernel = self.kernels[kernel]
+        else:
+            kid = None
         seedvec = self.onehot_encode(seedset)
         if not correction:
             nodevec = np.dot(kernel, seedvec)
@@ -250,8 +285,18 @@ class GraphKernel:
                 nodevec = statsig.istvan(np.dot(kernel, seedvec), samples_proj)
             else:
                 raise ValueError('Incorrect significance formula selected ({}): possible modes are ZSCORE, ONETAIL, ISTVAN.'.format(significance_formula))
+        elif correction == 'CONFIGURATION_MODEL':
+            if kid is None or kid+'_cmmean' not in self.kernels.keys() or kid+'_cmstd' not in self.kernels.keys():
+                raise ValueError('CONFIGURATION_MODEL correction can be invoked only for pre_calculated kernels and kernel statistics. Call eval_kernel_statistics() function on the selected kernel to make this mode accessible.')
+            mean, std = self[kid+'_cmmean'], self[kid+'_cmstd']
+            if significance_formula == 'ZSCORE':
+                nodevec = statsig.zscore(np.dot(kernel, seedvec), mean=np.dot(mean, seedvec), std=np.dot(std, seedvec))
+            elif significance_formula == 'ISTVAN':
+                nodevec = statsig.istvan(np.dot(kernel, seedvec), mean=np.dot(mean, seedvec), std=np.dot(std, seedvec))
+            else:
+                raise ValueError('Incorrect significance formula selected ({}): possible modes are ZSCORE, ISTVAN.'.format(significance_formula))
         else:
-            raise ValueError('Incorrect mode selected ({}): possible modes are SEEDSET_SIZE, DEGREE_CENTRALITY, RDM_SEED.'.format(correction))
+            raise ValueError('Incorrect mode selected ({}): possible modes are SEEDSET_SIZE, DEGREE_CENTRALITY, RDM_SEED, CONFIGURATION_MODEL.'.format(correction))
         if norm:
             nodevec /= nodevec.sum()
         if return_dict:
@@ -407,6 +452,22 @@ class GraphKernel:
         self.gm = GIDMapper(nodelist=self.nodelist)
         self.speak("Complete.", newline=True, verbose_level=1)
 
+    def rebuild_nx_graph(self):
+        graph = nx.from_numpy_matrix(self.adj)
+        return nx.relabel_nodes(graph, {i:self.nodelist[i] for i in range(len(self.nodelist))})
+
+    def kid2func(self, kid):
+        kid = kid.split('_')
+        if kid[0] == 'rw':
+            return partial(kernels.rw_kernel, nRw=int(kid[1]))
+        elif kid[0] == 'rwr':
+            return partial(kernels.rwr_kernel, alpha=float(kid[1]))
+        elif kid[0] == 'hk':
+            return partial(kernels.heat_kernel, t=float(kid[1]))
+        elif kid[0] == 'dsd':
+            return partial(kernels.dsd_kernel, nRw=int(kid[1]))
+        elif kid[0] == 'ist':
+            return kernels.istvan_kernel
 
     def __getitem__(self, kid):
         return self.kernels[kid]
