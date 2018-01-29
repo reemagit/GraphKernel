@@ -230,13 +230,14 @@ class GraphKernel:
             correction : str or False
                 Projection score correction to account for statistical biases such as high degree.
                 Options are:
+                    - False: no correction
                     - 'SEEDSET_SIZE': the final score vector is divided by the number of source nodes
                     - 'DEGREE_CENTRALITY': the score of each destination node is divided by its degree
                     - 'RDM_SEED': statistical significance of the score is evaluated by considering random samples of the source nodes in seedset.
                         Random samples of seedset have to be provided through the rdm_seedsets parameter.
                         In this mode the output projection nodes will be the significance values of the uncorrected scores,
                         calculated according to the formula specified by the significance_formula parameter
-                    - False: no correction
+                    - 'CONFIGURATION MODEL': statistical significance of the score is evaluated by considering random configuration model samples of the network.
 
             rdm_seedsets : list of lists
                 List of lists containing random samples of the seedset list. To be used for statistical significance evaluation.
