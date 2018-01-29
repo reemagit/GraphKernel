@@ -14,7 +14,9 @@ See the tutorial in Jupiter notebook **GraphKernel_tutorial.ipynb** to see more 
 - numpy
 - scipy
 - networkx (optional but recommended, otherwise graphs can be passed as numpy adjacency matrices)
+- tqdm (optional but recommended, in order to have nice progress bars in longer operations)
 - h5py (optional, for saving and loading kernels)
+
 
 ## Example of basic usage
 
