@@ -247,7 +247,7 @@ class GraphKernel:
                 Formula to calculate statistical significance.
                 Options are:
                     - 'ZSCORE': (value - mean) / std.dev.
-                    - 'ISTVAN': value - mean - 2 * std.dev.
+                    - 'ISTVAN': Not implemented
 
             norm : bool
                 Whether to normalize the output projection vector. Useful if comparing projections of several source nodesets with different sizes
