@@ -73,7 +73,7 @@ print ranking_rw
 ```
 dsd2 = gk.eval_dsd_kernel(2) # Diffusion State Distance with 2 time steps
 proj_dsd = gk.get_projection(source_nodes, dsd2) # Projection of source nodes on whole network
-ranking_dsd = gk.get_ranking(proj_dsd) # Target nodes IDs ordered by projection score
+ranking_dsd = gk.get_ranking(proj_dsd, descending=False) # NOTICE: we order in ascending way because DSD is a distance matrix, not a similarity matrix!
 
 print proj_dsd
 print ranking_dsd
