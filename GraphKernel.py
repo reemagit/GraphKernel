@@ -355,7 +355,7 @@ class GraphKernel:
         samples = self.get_projections_batch(seedsets=seedsets, kernel=kernel)
         return samples.mean(axis=1), samples.std(axis=1)
 
-    def get_ranking(self, projection, candidateset=None):
+    def get_ranking(self, projection, candidateset=None, descending=True):
         """
             Evaluates ranking of nodes from a projection vector or dict
 
@@ -366,6 +366,8 @@ class GraphKernel:
 
             candidate_set : set of destination nodes to consider for the ranking. If None all network nodes are considered
 
+            ascending : Whether to orded in ascending or descending scores (ascending for similarity matrices, descending for distances such as DSD)
+
             Returns
             -------
             list
@@ -374,10 +376,11 @@ class GraphKernel:
         """
         if isinstance(projection,dict):
             projection = self.dict2vec(projection)
+        direction = -1 if descending else 1
         if candidateset is None:
-            return self.gm.id2gid(np.argsort(projection)[::-1])
+            return self.gm.id2gid(np.argsort(projection)[::direction])
         else:
-            return [self.gm.id2gid(i) for i in np.argsort(projection)[::-1] if self.gm.id2gid(i) in candidateset]
+            return [self.gm.id2gid(i) for i in np.argsort(projection)[::direction] if self.gm.id2gid(i) in candidateset]
 
     def available_kernels(self):
         """
