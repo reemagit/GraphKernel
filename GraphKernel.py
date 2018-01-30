@@ -70,7 +70,7 @@ class GraphKernel:
             self.kernels = {}
             self.speak("Complete.", newline=True, verbose_level=1)
         else:
-            self.load_kernels(savefile)
+            self.load(savefile)
 
     def eval_rw_kernel(self, nRw):
         """
