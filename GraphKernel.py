@@ -199,6 +199,14 @@ class GraphKernel:
         else:
             raise ValueError('Incorrect rdmmode parameter selected ({}): possible modes are CONFIGURATION_MODEL.'.format(rdmmode))
 
+    def eval_icn_kernel(self):
+        kid = 'icn'
+        if kid not in self.kernels:
+            self.speak('Initializing ICN kernel (this may take a while)...', newline=False, verbose_level=1)
+            self.kernels[kid] = kernels.icn_kernel(self.adj)
+            self.speak('Complete.', newline=True)
+        return kid
+
     def onehot_encode(self, nodeset, norm=False):
         vec = np.zeros(self.adj.shape[0])
         vec[self.gm.gid2id(nodeset)] = 1
@@ -377,10 +385,14 @@ class GraphKernel:
         if isinstance(projection,dict):
             projection = self.dict2vec(projection)
         direction = -1 if descending else 1
+        ranking = self.gm.id2gid(np.argsort(projection)[::direction])
         if candidateset is None:
-            return self.gm.id2gid(np.argsort(projection)[::direction])
+            return ranking
         else:
-            return [self.gm.id2gid(i) for i in np.argsort(projection)[::direction] if self.gm.id2gid(i) in candidateset]
+            excludeset = set(self.nodelist) - set(candidateset)
+            for elem in excludeset:
+                ranking.remove(elem)
+            return ranking
 
     def available_kernels(self):
         """
