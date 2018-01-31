@@ -1,12 +1,14 @@
 from __future__ import division
 import numpy as np
+from scipy import sparse
 
 # Notice: The article references refer to the papers from which the kernel equations have been considered for
 # implementation here, NOT the original paper where the kernel has been proposed.
 
 # Random Walk (RW) kernel (Cowen et al., 2017)
 def rw_kernel(A, nRw):
-    return np.linalg.matrix_power(A / A.sum(axis=0), nRw)
+    Asp = sparse.csc_matrix(A / A.sum(axis=0))
+    return np.asarray((Asp ** nRw).todense())
 
 # Random Walk with Restart (RWR) kernel (Cowen et al., 2017)
 def rwr_kernel(A, alpha):
@@ -39,12 +41,14 @@ def dsd_kernel(adjacency, nRw):
 def heat_kernel(A, t):
     D = np.diag(A.sum(axis=0))
     W = D - A
-    return np.exp(-1 * t * W)
+    Wtexp = sparse.csc_matrix(-1 * t * W)
+    return sparse.linalg.expm(Wtexp)
 
 # Interconnectedness (ICN) kernel (Hsu et al., 2011)
 def icn_kernel(A):
     Dinv = np.sqrt(A.sum(axis=0))
-    return (np.linalg.matrix_power(A, 2) + 2 * A) / (Dinv[:,None] * Dinv)
+    Asp = sparse.csc_matrix(A)
+    return np.asarray((Asp**2 + Asp * 2).todense()) / (Dinv[:,None] * Dinv)
 
 def istvan_kernel(A):
     raise NotImplementedError
