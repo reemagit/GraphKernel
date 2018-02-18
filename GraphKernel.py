@@ -168,37 +168,6 @@ class GraphKernel:
             self.speak('Complete.', newline=True)
         return kid
 
-    def eval_kernel_statistics(self, kernel, n_samples=None, rdmmode='CONFIGURATION_MODEL'):
-        if rdmmode == 'CONFIGURATION_MODEL':
-            if n_samples is None:
-                raise ValueError("n_samples argument must be provided if samples is set to 'CONFIGURATION_MODEL'.")
-            graph = self.rebuild_nx_graph()
-            degseq = [nx.degree(graph,node) for node in self.nodelist]
-
-            # Welford's method (ca. 1960) to calculate running variance
-            N = n_samples
-            M = 0
-            S = 0
-            try:
-                from tqdm import tnrange # if tqdm is present use tqdm progress bar
-                rangefunc = tnrange
-            except ImportError: # if tqdm is not present it will fallback on standard loop
-                rangefunc = range
-            self.speak('Calculating kernel statistics (this may take a long while)...', newline=False, verbose_level=1)
-            for k in rangefunc(N):
-                rdmgraph = nx.relabel_nodes(nx.configuration_model(degseq), mapping={i:self.nodelist[i] for i in range(len(self.nodelist))})
-                rdmadj = np.asarray(nx.adjacency_matrix(rdmgraph, nodelist=self.nodelist).todense())
-                kmatrix = self.kid2func(kernel)(A=rdmadj)
-                x = kmatrix
-                oldM = M
-                M = M + (x - M) / (k + 1)
-                S = S + (x - M) * (x - oldM)
-            self.kernels[kernel + '_cmmean'] = M
-            self.kernels[kernel + '_cmstd'] = np.sqrt(S / (N - 1))
-            self.speak('Complete', newline=True, verbose_level=1)
-        else:
-            raise ValueError('Incorrect rdmmode parameter selected ({}): possible modes are CONFIGURATION_MODEL.'.format(rdmmode))
-
     def eval_icn_kernel(self):
         kid = 'icn'
         if kid not in self.kernels:
@@ -206,6 +175,69 @@ class GraphKernel:
             self.kernels[kid] = kernels.icn_kernel(self.adj)
             self.speak('Complete.', newline=True)
         return kid
+
+
+    def eval_kernel_statistics(self, kernel, n_samples=None, rdmmode='CONFIGURATION_MODEL', n_edge_rewirings=None):
+        """
+            Pre-computes the approximate kernel statistics necessary to apply the CONFIGURATION_MODEL and EDGE_REWIRING corrections to the projection scores
+
+            Parameters
+            ----------
+            kernel : str
+                Kernel ID (KID) of the chosen kernel.
+
+            n_samples : int
+                Number of random samples to calculate.
+
+            rdmmode : str
+                Randomization mode for the network edges. To be invoked prior to calling get_projection function with correction mode 'CONFIGURATION_MODEL' or 'EDGE_REWIRING'.
+                Options are:
+                    - 'CONFIGURATION_MODEL': generates a configuration model sample of the network
+                    - 'EDGE_REWIRING': generates each sample by swapping (n_edge_rewirings) times a pair of randomly selected edges. Connectivity of the final graph is enforced.
+
+            n_edge_rewirings : int
+                Number of times the pairs of edges are swapped in a sample.
+
+        """
+        if rdmmode == 'CONFIGURATION_MODEL':
+            def gen_func(graph):
+                degseq = [nx.degree(graph, node) for node in self.nodelist]
+                return nx.relabel_nodes(nx.configuration_model(degseq),mapping={i: self.nodelist[i] for i in range(len(self.nodelist))})
+            statprefix = 'cm'
+        elif rdmmode == 'EDGE_REWIRING':
+            def gen_func(graph):
+                rdmgraph = graph.copy()
+                nx.connected_double_edge_swap(rdmgraph, nswap=n_edge_rewirings)
+                return rdmgraph
+            statprefix = 'er'
+        else:
+            raise ValueError('Incorrect rdmmode parameter selected ({}): possible modes are CONFIGURATION_MODEL, EDGE_REWIRING.'.format(rdmmode))
+        if n_samples is None:
+            raise ValueError("n_samples argument must be provided if samples is set to 'CONFIGURATION_MODEL'.")
+        graph = self.rebuild_nx_graph()
+
+        # Welford's method (ca. 1960) to calculate running variance
+        N = n_samples
+        M = 0
+        S = 0
+        try:
+            from tqdm import tnrange # if tqdm is present use tqdm progress bar
+            rangefunc = tnrange
+        except ImportError: # if tqdm is not present it will fallback on standard loop
+            rangefunc = range
+        self.speak('Calculating kernel statistics (this may take a long while)...', newline=False, verbose_level=1)
+        for k in rangefunc(N):
+            rdmgraph = gen_func(graph)
+            rdmadj = np.asarray(nx.adjacency_matrix(rdmgraph, nodelist=self.nodelist).todense())
+            kmatrix = self.kid2func(kernel)(A=rdmadj)
+            x = kmatrix
+            oldM = M
+            M = M + (x - M) / (k + 1)
+            S = S + (x - M) * (x - oldM)
+        self.kernels[kernel + '_' + statprefix + 'mean'] = M
+        self.kernels[kernel + '_' + statprefix + 'std'] = np.sqrt(S / (N - 1))
+        self.speak('Complete', newline=True, verbose_level=1)
+
 
     def onehot_encode(self, nodeset, norm=False):
         vec = np.zeros(self.adj.shape[0])
@@ -245,7 +277,10 @@ class GraphKernel:
                         Random samples of seedset have to be provided through the rdm_seedsets parameter.
                         In this mode the output projection nodes will be the significance values of the uncorrected scores,
                         calculated according to the formula specified by the significance_formula parameter
-                    - 'CONFIGURATION MODEL': statistical significance of the score is evaluated by considering random configuration model samples of the network.
+                    - 'CONFIGURATION MODEL': statistical significance of the score is evaluated by comparing to random configuration model samples of the network.
+                        This mode can be called only after having called the eval_kernel_statistics method with rdmmode='CONFIGURATION_MODEL'
+                    - 'EDGE_REWIRING': statistical significance of the score is evaluated by comparing to samples generated by random rewiring of the network edges.
+                        This mode can be called only after having called the eval_kernel_statistics method with rdmmode='EDGE_REWIRING'
 
             rdm_seedsets : list of lists
                 List of lists containing random samples of the seedset list. To be used for statistical significance evaluation.
@@ -294,10 +329,11 @@ class GraphKernel:
                 nodevec = statsig.istvan(np.dot(kernel, seedvec), samples_proj)
             else:
                 raise ValueError('Incorrect significance formula selected ({}): possible modes are ZSCORE, ONETAIL, ISTVAN.'.format(significance_formula))
-        elif correction == 'CONFIGURATION_MODEL':
-            if kid is None or kid+'_cmmean' not in self.kernels.keys() or kid+'_cmstd' not in self.kernels.keys():
-                raise ValueError('CONFIGURATION_MODEL correction can be invoked only for pre_calculated kernels and kernel statistics. Call eval_kernel_statistics() function on the selected kernel to make this mode accessible.')
-            mean, std = self[kid+'_cmmean'], self[kid+'_cmstd']
+        elif correction == 'CONFIGURATION_MODEL' or correction=='EDGE_REWIRING':
+            statprefix = 'cm' if correction=='CONFIGURATION_MODEL' else 'er'
+            if kid is None or kid+'_'+statprefix+'mean' not in self.kernels.keys() or kid+'_'+statprefix+'std' not in self.kernels.keys():
+                raise ValueError('CONFIGURATION_MODEL/EDGE_REWIRING correction can be invoked only for pre_calculated kernels and kernel statistics. Call eval_kernel_statistics() function on the selected kernel to make this mode accessible.')
+            mean, std = self[kid+'_'+statprefix+'mean'], self[kid+'_'+statprefix+'std']
             if significance_formula == 'ZSCORE':
                 nodevec = statsig.zscore(np.dot(kernel, seedvec), mean=np.dot(mean, seedvec), std=np.dot(std, seedvec))
             elif significance_formula == 'ISTVAN':
@@ -305,13 +341,13 @@ class GraphKernel:
             else:
                 raise ValueError('Incorrect significance formula selected ({}): possible modes are ZSCORE, ISTVAN.'.format(significance_formula))
         else:
-            raise ValueError('Incorrect mode selected ({}): possible modes are SEEDSET_SIZE, DEGREE_CENTRALITY, RDM_SEED, CONFIGURATION_MODEL.'.format(correction))
+            raise ValueError('Incorrect mode selected ({}): possible modes are SEEDSET_SIZE, DEGREE_CENTRALITY, RDM_SEED, CONFIGURATION_MODEL, EDGE_REWIRING.'.format(correction))
         if norm:
             nodevec /= nodevec.sum()
         if return_dict:
             valuedict = self.vec2dict(nodevec)
             if destset is not None:
-                return {key:value for key,value in valuedict if key in destset}
+                return {key:value for key,value in valuedict.iteritems() if key in destset}
             else:
                 return valuedict
         else:
@@ -372,9 +408,11 @@ class GraphKernel:
             projection : dict or numpy array
                 Projection dict/vector obtained with get_projection function
 
-            candidate_set : set of destination nodes to consider for the ranking. If None all network nodes are considered
+            candidate_set : list
+                Set of destination nodes to consider for the ranking. If None all network nodes are considered
 
-            ascending : Whether to orded in ascending or descending scores (ascending for similarity matrices, descending for distances such as DSD)
+            ascending : bool
+                Whether to order in ascending or descending scores (ascending for similarity matrices, descending for distances such as DSD)
 
             Returns
             -------
@@ -408,6 +446,33 @@ class GraphKernel:
         """
         return self.kernels.keys()
 
+    def get_average_projection(self, sourceset, destset, kernel):
+        """
+            Evaluates average projection from sourceset to destset using kernel matrix
+
+            Parameters
+            ----------
+            sourceset : list
+                List of source node IDs
+
+            destset : list
+                List of destination node IDs
+
+            kernel : str or numpy matrix
+                KID or kernel matrix
+
+            Returns
+            -------
+            float
+                Average projection from sourceset to destset
+
+        """
+        if isinstance(kernel, basestring):
+            kernel = self.kernels[kernel]
+        seedvec = self.onehot_encode(sourceset, norm=True)
+        nodevec = np.dot(kernel, seedvec)
+        return (self.onehot_encode(destset, norm=True) * nodevec).sum()
+
     def save(self, filename, kidlist=None, description=None):
         """
             Save kernels to file
@@ -434,9 +499,9 @@ class GraphKernel:
             for kid in kidlist:
                 hf.create_dataset(kid, data=self.kernels[kid], compression="gzip")
             hf.create_dataset('nodelist', data=self.nodelist)
-            hf.create_dataset('adjacency', data=self.adj)
+            hf.create_dataset('adjacency', data=self.adj, compression="gzip")
             if description is not None:
-                hf.create_dataset('description', data=description, compression="gzip")
+                hf.create_dataset('description', data=description)
         self.speak("Complete.", newline=True, verbose_level=1)
 
     def load(self, filename):
