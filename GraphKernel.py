@@ -48,11 +48,6 @@ class GraphKernel:
             verbose_level : int
                 Level of verbosity. Current implemented levels: 0 for no output, 1 for basic output
 
-            Returns
-            -------
-            (numpy array, numpy array)
-                Mean and std.dev. vectors of seedsets projections distribution
-
         """
         self.verbose_level = verbose_level
         if savefile is None:
@@ -62,7 +57,7 @@ class GraphKernel:
                 if nodelist is None:
                     nodelist = range(self.adj.shape[0])
             else: # if NetworkX graph
-                self.adj = np.array(nx.adjacency_matrix(graph ,nodelist=nodelist, weight='weight').todense())
+                self.adj = np.array(nx.adjacency_matrix(graph ,nodelist=nodelist, weight=weight).todense())
                 if nodelist is None:
                     nodelist = graph.nodes()
             self.nodelist = nodelist
@@ -168,6 +163,14 @@ class GraphKernel:
             self.speak('Complete.', newline=True)
         return kid
 
+    def eval_istvan2_kernel(self):
+        kid = 'ist2'
+        if kid not in self.kernels:
+            self.speak('Initializing Istvan kernel (this may take a while)...', newline=False, verbose_level=1)
+            self.kernels[kid] = kernels.istvan_kernel2(self.adj)
+            self.speak('Complete.', newline=True)
+        return kid
+
     def eval_icn_kernel(self):
         kid = 'icn'
         if kid not in self.kernels:
@@ -235,13 +238,16 @@ class GraphKernel:
             M = M + (x - M) / (k + 1)
             S = S + (x - M) * (x - oldM)
         self.kernels[kernel + '_' + statprefix + 'mean'] = M
-        self.kernels[kernel + '_' + statprefix + 'std'] = np.sqrt(S / (N - 1))
+        self.kernels[kernel + '_' + statprefix + 'var'] = np.sqrt(S / (N - 1))
         self.speak('Complete', newline=True, verbose_level=1)
 
 
     def onehot_encode(self, nodeset, norm=False):
-        vec = np.zeros(self.adj.shape[0])
-        vec[self.gm.gid2id(nodeset)] = 1
+        if len(nodeset) == self.adj.shape[0]: # if the seedgenes are already in vector form (also for weighted configurations)
+            vec = nodeset
+        else:
+            vec = np.zeros(self.adj.shape[0])
+            vec[self.gm.gid2id(nodeset)] = 1
         if norm:
             vec /= vec.sum()
         return vec
@@ -331,13 +337,13 @@ class GraphKernel:
                 raise ValueError('Incorrect significance formula selected ({}): possible modes are ZSCORE, ONETAIL, ISTVAN.'.format(significance_formula))
         elif correction == 'CONFIGURATION_MODEL' or correction=='EDGE_REWIRING':
             statprefix = 'cm' if correction=='CONFIGURATION_MODEL' else 'er'
-            if kid is None or kid+'_'+statprefix+'mean' not in self.kernels.keys() or kid+'_'+statprefix+'std' not in self.kernels.keys():
+            if kid is None or kid+'_'+statprefix+'mean' not in self.kernels.keys() or kid+'_'+statprefix+'var' not in self.kernels.keys():
                 raise ValueError('CONFIGURATION_MODEL/EDGE_REWIRING correction can be invoked only for pre_calculated kernels and kernel statistics. Call eval_kernel_statistics() function on the selected kernel to make this mode accessible.')
-            mean, std = self[kid+'_'+statprefix+'mean'], self[kid+'_'+statprefix+'std']
+            mean, var = self[kid+'_'+statprefix+'mean'], self[kid+'_'+statprefix+'var']
             if significance_formula == 'ZSCORE':
-                nodevec = statsig.zscore(np.dot(kernel, seedvec), mean=np.dot(mean, seedvec), std=np.dot(std, seedvec))
+                nodevec = statsig.zscore(np.dot(kernel, seedvec), mean=np.dot(mean, seedvec), std=np.sqrt(np.dot(var, seedvec**2)))
             elif significance_formula == 'ISTVAN':
-                nodevec = statsig.istvan(np.dot(kernel, seedvec), mean=np.dot(mean, seedvec), std=np.dot(std, seedvec))
+                nodevec = statsig.istvan(np.dot(kernel, seedvec), mean=np.dot(mean, seedvec), std=np.sqrt(np.dot(var, seedvec**2)))
             else:
                 raise ValueError('Incorrect significance formula selected ({}): possible modes are ZSCORE, ISTVAN.'.format(significance_formula))
         else:

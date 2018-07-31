@@ -53,3 +53,6 @@ def icn_kernel(A):
 
 def istvan_kernel(A):
     raise NotImplementedError
+
+def istvan_kernel2(A):
+    raise NotImplementedError
