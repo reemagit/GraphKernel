@@ -25,6 +25,7 @@ def rwr_kernel(A, alpha):
 def dsd_kernel(adjacency, nRw):
     from numpy.linalg import inv
     from scipy.spatial.distance import pdist, squareform
+    adjacency = np.asmatrix(adjacency)
     n = adjacency.shape[0]
     degree = adjacency.sum(axis=1)
     p = adjacency / degree
